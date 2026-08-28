@@ -123,11 +123,43 @@
   th.group-all   { border-left: 2px solid var(--gridline); }
   td.group-all   { border-left: 2px solid var(--gridline); }
   td.sig { color: #067a3c; font-weight: 700; }
+
+  /* ---- Manuscript view: a tight, side-legend print layout built on demand
+     from the same state/data as the interactive graph above (see
+     renderManuscriptView()), so it can never drift out of sync. ---- */
+  .manuscript-toggle-row { margin: 0 0 18px; }
+  .btn-manuscript {
+    font-family: inherit; font-size: 12.5px; font-weight: 600;
+    padding: 8px 14px; border-radius: 7px; border: 1px solid var(--border);
+    background: var(--text-primary); color: var(--surface-1); cursor: pointer;
+  }
+  .btn-manuscript:hover { opacity: 0.85; }
+  .btn-manuscript:focus-visible { outline: 2px solid var(--series-mp); outline-offset: 2px; }
+
+  .manuscript-wrap { display: none; }
+  .viz-root.manuscript-mode h1,
+  .viz-root.manuscript-mode .subtitle,
+  .viz-root.manuscript-mode .controls-row,
+  .viz-root.manuscript-mode .headline,
+  .viz-root.manuscript-mode .main-grid,
+  .viz-root.manuscript-mode details.table-wrap { display: none; }
+  .viz-root.manuscript-mode .manuscript-wrap { display: block; }
+
+  .ms-caption { font-size: 12px; color: var(--text-secondary); margin: 0 0 12px; line-height: 1.6; }
+  .ms-caption strong { color: var(--text-primary); }
+  .manuscript-panel { display: inline-flex; align-items: center; gap: 18px; background: var(--surface-1); padding: 10px; }
+  .manuscript-panel svg { display: block; }
+  .ms-legend { display: flex; flex-direction: column; gap: 9px; font-size: 12px; color: var(--text-primary); white-space: nowrap; }
+  .ms-legend-item { display: flex; align-items: center; gap: 7px; }
 </style>
 
 <div class="viz-root">
   <h1>Pairwise remedy significance — network view</h1>
   <p class="subtitle">Each node is a remedy; each edge is one pairwise comparison. <strong>All</strong> is the omnibus pairwise ANOVA on the full combined dataset (2016 + 2022 together); <strong>2016</strong> and <strong>2022</strong> are the same post-hoc contrasts run within each year's subset alone. Choose the dataset, effect, and measure below. In <strong>Combo</strong>, an edge is dashed (but still colored) when the 2016 and 2022 subsets disagree on significance, and reverts to plain grey dashed if both subsets agree it's <em>not</em> significant — even when the combined All dataset was significant.</p>
+
+  <div class="manuscript-toggle-row">
+    <button class="btn-manuscript" id="manuscript-toggle">Manuscript view</button>
+  </div>
 
   <div class="controls-row">
     <div class="control-group">
@@ -197,6 +229,14 @@
       </table>
     </div>
   </details>
+
+  <div class="manuscript-wrap" id="manuscript-wrap">
+    <p class="ms-caption" id="ms-caption"></p>
+    <div class="manuscript-panel">
+      <svg id="ms-svg" width="355" height="394" viewBox="0 0 355 394" role="img" aria-label="Manuscript-layout network figure"></svg>
+      <div class="ms-legend" id="ms-legend"></div>
+    </div>
+  </div>
 </div>
 
 <script>
@@ -552,6 +592,107 @@
     lbl.textContent = it.label;
     row.appendChild(swSvg); row.appendChild(lbl);
     legendEl.appendChild(row);
+  });
+
+  // ---- manuscript view: a tight, side-legend layout built on demand from
+  // the SAME state/edgesData/classifyEdge() used above, so it can't drift
+  // out of sync with the interactive graph. Re-rendered only when the
+  // toggle is clicked (not on every interactive render()), since it's a
+  // frozen snapshot for exporting, not a live view. ----
+  const MS_CX = 177, MS_CY = 197, MS_R = 147, MS_r = 42;
+  function buildManuscriptPositions() {
+    const p = {};
+    nodes.forEach((name, i) => {
+      const angle = (-90 + i * 60) * Math.PI / 180;
+      p[name] = { x: MS_CX + MS_R * Math.cos(angle), y: MS_CY + MS_R * Math.sin(angle) };
+    });
+    return p;
+  }
+  function renderLegendInto(container, items) {
+    container.innerHTML = '';
+    items.forEach(it => {
+      const row = document.createElement('div');
+      row.className = 'ms-legend-item';
+      const swSvg = document.createElementNS(svgNS, 'svg');
+      swSvg.setAttribute('class', 'legend-swatch-svg');
+      swSvg.setAttribute('width', 24);
+      swSvg.setAttribute('height', 8);
+      const swLine = document.createElementNS(svgNS, 'line');
+      swLine.setAttribute('x1', 1); swLine.setAttribute('x2', 23);
+      swLine.setAttribute('y1', 4); swLine.setAttribute('y2', 4);
+      swLine.setAttribute('stroke', it.stroke);
+      swLine.setAttribute('stroke-width', it.width);
+      if (it.dash) swLine.setAttribute('stroke-dasharray', it.dash);
+      swSvg.appendChild(swLine);
+      const lbl = document.createElement('span');
+      lbl.textContent = it.label;
+      row.appendChild(swSvg); row.appendChild(lbl);
+      container.appendChild(row);
+    });
+  }
+  function renderManuscriptView() {
+    const { dataset, effect, measure, selectedTriangle } = state;
+    const msPos = buildManuscriptPositions();
+    const activeNodes = selectedTriangle ? new Set(selectedTriangle.split('|')) : null;
+
+    const svg = document.getElementById('ms-svg');
+    svg.innerHTML = '';
+    const edgesG2 = document.createElementNS(svgNS, 'g');
+    const nodesG2 = document.createElementNS(svgNS, 'g');
+
+    edgesData.forEach(e => {
+      const p1 = msPos[e.a], p2 = msPos[e.b];
+      const dx = p2.x - p1.x, dy = p2.y - p1.y;
+      const dist = Math.sqrt(dx * dx + dy * dy);
+      const ux = dx / dist, uy = dy / dist;
+      const c = classifyEdge(e, dataset, measure, effect);
+
+      const line = document.createElementNS(svgNS, 'line');
+      line.setAttribute('x1', p1.x + ux * MS_r);
+      line.setAttribute('y1', p1.y + uy * MS_r);
+      line.setAttribute('x2', p2.x - ux * MS_r);
+      line.setAttribute('y2', p2.y - uy * MS_r);
+      let cls = 'edge ' + (c.isSig ? ('sig-' + c.driver) : 'sig-none');
+      if (c.thick) cls += ' thick';
+      if (c.disagree) cls += ' disagree';
+      if (activeNodes) cls += (activeNodes.has(e.a) && activeNodes.has(e.b)) ? ' is-active' : ' is-dimmed';
+      line.setAttribute('class', cls);
+      edgesG2.appendChild(line);
+    });
+
+    nodes.forEach(name => {
+      const p = msPos[name];
+      const g = document.createElementNS(svgNS, 'g');
+      let cls = 'node';
+      if (activeNodes) cls += activeNodes.has(name) ? ' is-active' : ' is-dimmed';
+      g.setAttribute('class', cls);
+      const circle = document.createElementNS(svgNS, 'circle');
+      circle.setAttribute('cx', p.x); circle.setAttribute('cy', p.y); circle.setAttribute('r', MS_r);
+      const text = document.createElementNS(svgNS, 'text');
+      text.setAttribute('x', p.x); text.setAttribute('y', p.y + 4);
+      text.textContent = name;
+      g.appendChild(circle); g.appendChild(text);
+      nodesG2.appendChild(g);
+    });
+
+    svg.appendChild(edgesG2);
+    svg.appendChild(nodesG2);
+
+    renderLegendInto(document.getElementById('ms-legend'), legendItems);
+
+    let captionHTML = `Dataset: <strong>${datasetLabel(dataset)}</strong> · Effect: <strong>${effectLabel(effect)}</strong> · Measure: <strong>${measureLabel(measure)}</strong>`;
+    if (selectedTriangle) {
+      captionHTML += `<br>Highlighted trio: <strong>${selectedTriangle.split('|').join(' – ')}</strong>`;
+    }
+    document.getElementById('ms-caption').innerHTML = captionHTML;
+  }
+
+  const manuscriptToggle = document.getElementById('manuscript-toggle');
+  const vizRootEl = document.querySelector('.viz-root');
+  manuscriptToggle.addEventListener('click', () => {
+    const isOn = vizRootEl.classList.toggle('manuscript-mode');
+    manuscriptToggle.textContent = isOn ? 'Back to interactive' : 'Manuscript view';
+    if (isOn) renderManuscriptView();
   });
 
   // ---- controls ----
