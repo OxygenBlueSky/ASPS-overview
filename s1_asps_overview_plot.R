@@ -3,6 +3,7 @@
 library(tidyverse)
 library(ggrepel)
 library(readxl)
+library(svglite)  # ggsave() dispatches to this for .svg output
 
 # edit data/asps_overview_figure_data.xlsx directly (add rows, etc.) and
 # rerun this script -- no separate export step needed
@@ -270,3 +271,7 @@ p
 #===== SECTION 6: Export ======================================================
 
 ggsave("asps_overview_plot.png", p, width = 20, height = 18, units = "cm", dpi = 300)
+
+# Vector master (manuscript-ready, stays smooth at any zoom) alongside the
+# PNG above - same dimensions, no dpi (meaningless for a vector format).
+ggsave("asps_overview_plot.svg", p, width = 20, height = 18, units = "cm")

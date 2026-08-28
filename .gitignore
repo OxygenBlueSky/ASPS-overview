@@ -3,3 +3,8 @@
 .RData
 .Ruserdata
 .DS_Store
+
+# Rendered plot exports and manuscript drafts — kept local only, not versioned
+*.docx
+*.png
+asps_overview_plot.svg

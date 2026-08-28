@@ -1,0 +1,573 @@
+<title>Remedy Pair Significance Network — All / 2016 / 2022 / Combo</title>
+<style>
+  /* Deliberately single-theme (white/black), not adaptive to viewer dark mode —
+     matches the fixed white background of the source ASPS plots. */
+  .viz-root {
+    color-scheme: light;
+    --surface-1:      #ffffff;
+    --surface-2:      #f4f4f4;
+    --text-primary:   #000000;
+    --text-secondary: #4a4a4a;
+    --muted:          #767676;
+    --gridline:       #a8a8a8;
+    --node-stroke:    #000000;
+    --border:         rgba(0,0,0,0.15);
+    --series-mp:      #FFC72C;
+    --series-rr:      #00BD5F;
+    --series-both:    #E7298A;
+  }
+
+  .viz-root {
+    font-family: system-ui, -apple-system, "Segoe UI", sans-serif;
+    color: var(--text-primary);
+    background: var(--surface-1);
+    max-width: 1080px;
+    margin: 0 auto;
+    padding: 28px 24px 40px;
+    box-sizing: border-box;
+  }
+  .viz-root * { box-sizing: border-box; }
+
+  h1 { font-size: 20px; margin: 0 0 4px; letter-spacing: -0.01em; }
+  .subtitle { font-size: 13.5px; color: var(--text-secondary); margin: 0 0 22px; max-width: 66ch; line-height: 1.5; }
+
+  .controls-row {
+    display: flex; flex-wrap: wrap; gap: 18px 28px;
+    padding: 14px 16px; margin-bottom: 20px;
+    background: var(--surface-2); border: 1px solid var(--border); border-radius: 10px;
+  }
+  .control-group { display: flex; flex-direction: column; gap: 6px; }
+  .control-label { font-size: 11px; text-transform: uppercase; letter-spacing: 0.05em; color: var(--muted); font-weight: 600; }
+  .segmented { display: inline-flex; border: 1px solid var(--border); border-radius: 7px; overflow: hidden; }
+  .segmented button {
+    font-family: inherit; font-size: 12.5px; color: var(--text-secondary);
+    background: var(--surface-1); border: none; padding: 6px 12px; cursor: pointer;
+    border-right: 1px solid var(--border);
+  }
+  .segmented button:last-child { border-right: none; }
+  .segmented button:hover { background: var(--surface-2); }
+  .segmented button:focus-visible { outline: 2px solid var(--series-mp); outline-offset: -2px; }
+  .segmented button.is-selected { background: var(--text-primary); color: var(--surface-1); font-weight: 600; }
+
+  .headline {
+    font-size: 13.5px; color: var(--text-secondary); margin: 0 0 16px;
+    padding: 10px 14px; background: var(--surface-2); border-radius: 8px;
+  }
+  .headline strong { color: var(--text-primary); font-variant-numeric: tabular-nums; }
+
+  .main-grid { display: grid; grid-template-columns: minmax(0,1.55fr) minmax(220px,1fr); gap: 22px; align-items: start; }
+  @media (max-width: 760px) { .main-grid { grid-template-columns: 1fr; } }
+
+  .graph-panel { border: 1px solid var(--border); border-radius: 12px; background: var(--surface-1); position: relative; }
+  #svg { display: block; width: 100%; height: auto; }
+
+  .edge { fill: none; stroke: var(--gridline); stroke-width: 2; cursor: pointer; transition: opacity .15s ease, stroke-width .15s ease; }
+  .edge.sig-mp   { stroke: var(--series-mp); }
+  .edge.sig-rr   { stroke: var(--series-rr); }
+  .edge.sig-both { stroke: var(--series-both); }
+  .edge.sig-none { stroke-dasharray: 3 4; }
+  .edge.thick    { stroke-width: 3.5; }
+  /* "disagree" (Combo mode: the two yearly subsets don't agree) uses a coarser
+     dash than the "not significant" dash so the two read as visually distinct */
+  .edge.disagree { stroke-dasharray: 8 5; }
+  .edge.is-dimmed { opacity: 0.16; }
+  .edge.is-active { stroke-width: 5; opacity: 1; }
+  .edge:hover { opacity: 1; stroke-width: 5; }
+
+  .node circle { fill: var(--surface-1); stroke: var(--node-stroke); stroke-width: 1.5; }
+  .node text { fill: var(--text-primary); font-size: 13px; font-weight: 600; text-anchor: middle; }
+  .node.is-dimmed circle { opacity: 0.3; }
+  .node.is-dimmed text { opacity: 0.3; }
+  .node.is-active circle { stroke: var(--node-stroke); stroke-width: 2.5; }
+
+  .legend { display: flex; flex-wrap: wrap; gap: 14px 20px; padding: 12px 16px; font-size: 12px; color: var(--text-secondary); border-top: 1px solid var(--gridline); }
+  .legend-item { display: flex; align-items: center; gap: 7px; white-space: nowrap; }
+  .legend-swatch-svg { flex-shrink: 0; display: block; }
+
+  .tooltip {
+    position: absolute; pointer-events: none; z-index: 5;
+    background: var(--text-primary); color: var(--surface-1);
+    font-size: 11.5px; line-height: 1.5; padding: 9px 11px; border-radius: 7px;
+    box-shadow: 0 4px 14px rgba(0,0,0,0.18);
+    opacity: 0; transform: translateY(4px); transition: opacity .12s ease, transform .12s ease;
+    max-width: 260px;
+  }
+  .tooltip.is-visible { opacity: 1; transform: translateY(0); }
+  .tooltip .t-pair { font-weight: 700; margin-bottom: 4px; font-size: 12.5px; }
+  .tooltip .t-subset { font-weight: 700; margin-top: 6px; opacity: 0.75; }
+  .tooltip .t-subset:first-of-type { margin-top: 0; }
+  .tooltip .t-row.is-sig { color: #6be3a8; }
+
+  .side-panel { border: 1px solid var(--border); border-radius: 12px; background: var(--surface-2); padding: 14px; max-height: 560px; overflow-y: auto; }
+  .side-panel h2 { font-size: 12px; text-transform: uppercase; letter-spacing: 0.05em; color: var(--muted); margin: 0 0 10px; font-weight: 600; }
+  .tri-list { display: flex; flex-direction: column; gap: 6px; }
+  .tri-btn {
+    font-family: inherit; text-align: left; font-size: 13px; color: var(--text-primary);
+    background: var(--surface-1); border: 1px solid var(--border); border-radius: 7px;
+    padding: 8px 10px; cursor: pointer; line-height: 1.4;
+  }
+  .tri-btn:hover { border-color: var(--text-secondary); }
+  .tri-btn:focus-visible { outline: 2px solid var(--series-mp); outline-offset: 1px; }
+  .tri-btn.is-selected { background: var(--text-primary); color: var(--surface-1); border-color: var(--text-primary); }
+  .tri-empty { font-size: 13px; color: var(--muted); padding: 8px 2px; }
+
+  details.table-wrap { margin-top: 20px; border: 1px solid var(--border); border-radius: 10px; background: var(--surface-2); }
+  details.table-wrap summary { cursor: pointer; padding: 12px 16px; font-size: 13px; font-weight: 600; color: var(--text-secondary); list-style: none; }
+  details.table-wrap summary::-webkit-details-marker { display: none; }
+  details.table-wrap summary::before { content: "▸ "; }
+  details.table-wrap[open] summary::before { content: "▾ "; }
+  .table-scroll { overflow-x: auto; padding: 0 16px 16px; }
+  table { border-collapse: collapse; width: 100%; font-size: 11.5px; }
+  th, td { text-align: left; padding: 5px 8px; border-bottom: 1px solid var(--gridline); white-space: nowrap; font-variant-numeric: tabular-nums; }
+  th { color: var(--muted); font-weight: 600; font-size: 10px; text-transform: uppercase; letter-spacing: 0.03em; }
+  th.group-all   { border-left: 2px solid var(--gridline); }
+  td.group-all   { border-left: 2px solid var(--gridline); }
+  td.sig { color: #067a3c; font-weight: 700; }
+</style>
+
+<div class="viz-root">
+  <h1>Pairwise remedy significance — network view</h1>
+  <p class="subtitle">Each node is a remedy; each edge is one pairwise comparison. <strong>All</strong> is the omnibus pairwise ANOVA on the full combined dataset (2016 + 2022 together); <strong>2016</strong> and <strong>2022</strong> are the same post-hoc contrasts run within each year's subset alone. Choose the dataset, effect, and measure below. In <strong>Combo</strong>, an edge is dashed (but still colored) when the 2016 and 2022 subsets disagree on significance, and reverts to plain grey dashed if both subsets agree it's <em>not</em> significant — even when the combined All dataset was significant.</p>
+
+  <div class="controls-row">
+    <div class="control-group">
+      <span class="control-label">Dataset</span>
+      <div class="segmented" data-group="dataset">
+        <button data-value="all" class="is-selected">All</button>
+        <button data-value="y2016">2016</button>
+        <button data-value="y2022">2022</button>
+        <button data-value="combo">Combo</button>
+      </div>
+    </div>
+    <div class="control-group">
+      <span class="control-label">Effect</span>
+      <div class="segmented" data-group="effect">
+        <button data-value="potency" class="is-selected">Potency</button>
+        <button data-value="interaction">Interaction</button>
+        <button data-value="either">Either effect</button>
+      </div>
+    </div>
+    <div class="control-group">
+      <span class="control-label">Measure</span>
+      <div class="segmented" data-group="measure">
+        <button data-value="either" class="is-selected">Either measure</button>
+        <button data-value="maxprob">MaxProb only</button>
+        <button data-value="ratio">Ratio only</button>
+        <button data-value="both">Both required</button>
+      </div>
+    </div>
+  </div>
+
+  <p class="headline" id="headline"></p>
+
+  <div class="main-grid">
+    <div class="graph-panel">
+      <svg id="svg" viewBox="0 0 760 600" role="img" aria-label="Network of remedy pairs, colored by significance">
+        <g id="edges"></g>
+        <g id="nodes"></g>
+      </svg>
+      <div class="legend" id="legend"></div>
+      <div class="tooltip" id="tooltip"></div>
+    </div>
+
+    <div class="side-panel">
+      <h2 id="tri-heading">Qualifying trios</h2>
+      <div class="tri-list" id="tri-list"></div>
+    </div>
+  </div>
+
+  <details class="table-wrap">
+    <summary>Full pairwise p-value table (All / 2016 / 2022)</summary>
+    <div class="table-scroll">
+      <table id="data-table">
+        <thead>
+          <tr>
+            <th rowspan="2">Pair</th>
+            <th colspan="4">All</th>
+            <th colspan="4" class="group-all">2016 (AS)</th>
+            <th colspan="4" class="group-all">2022 (JZ)</th>
+          </tr>
+          <tr>
+            <th>MP pot</th><th>MP int</th><th>RR pot</th><th>RR int</th>
+            <th class="group-all">MP pot</th><th>MP int</th><th>RR pot</th><th>RR int</th>
+            <th class="group-all">MP pot</th><th>MP int</th><th>RR pot</th><th>RR int</th>
+          </tr>
+        </thead>
+        <tbody></tbody>
+      </table>
+    </div>
+  </details>
+</div>
+
+<script>
+(function () {
+  const nodes = ['Ars.Album', 'Lactose', 'Mercury', 'Silicea', 'Stannum', 'Sulphur'];
+
+  // mp/mpI = Maximum Probability potency/interaction; rr/rrI = Root/Sprout Ratio potency/interaction.
+  // all = combined dataset; y2016 = AS tab; y2022 = JZ tab.
+  // Verified against raw post-hoc emmeans workbooks: all 60 "all" values match the raw ALL sheet exactly.
+  const edgesData = [
+    { a: 'Ars.Album', b: 'Lactose',
+      all:   { mp: 0.2839,   mpI: 0.2416,               rr: 0.4226,   rrI: 0.1893 },
+      y2016: { mp: 0.359367, mpI: 0.466008811049771,    rr: 0.654776, rrI: 0.716338751337049 },
+      y2022: { mp: 0.540457, mpI: 0.101366793441776,    rr: 0.468153, rrI: 0.0456474085744085 } },
+    { a: 'Ars.Album', b: 'Mercury',
+      all:   { mp: 0.0335,   mpI: 0.0058,               rr: 0.2088,   rrI: 0.2721 },
+      y2016: { mp: 0.423597, mpI: 0.0486753650989562,   rr: 0.218213, rrI: 0.247603651443448 },
+      y2022: { mp: 0.031955, mpI: 0.0111000741235451,   rr: 0.574485, rrI: 0.223712657373795 } },
+    { a: 'Ars.Album', b: 'Silicea',
+      all:   { mp: 0.6762,   mpI: 0.0002,               rr: 0.0914,   rrI: 0.0328 },
+      y2016: { mp: 0.010065, mpI: 0.00370236107291396,  rr: 0.337385, rrI: 0.280814524732117 },
+      y2022: { mp: 0.069734, mpI: 0.163720495964073,    rr: 0.133110, rrI: 0.0133619552058728 } },
+    { a: 'Ars.Album', b: 'Stannum',
+      all:   { mp: 0.0428,   mpI: 0.1225,               rr: 0.0201,   rrI: 0.1623 },
+      y2016: { mp: 0.763902, mpI: 0.0401254062454464,   rr: 0.017095, rrI: 0.0957739130272197 },
+      y2022: { mp: 0.013916, mpI: 0.710058280495154,    rr: 0.366254, rrI: 0.340290149177103 } },
+    { a: 'Ars.Album', b: 'Sulphur',
+      all:   { mp: 0.4284,   mpI: 0.2178,               rr: 0.0002,   rrI: 0.5881 },
+      y2016: { mp: 1.0,      mpI: 0.502140846118545,    rr: 0.021823, rrI: 0.307252422035779 },
+      y2022: { mp: 0.285143, mpI: 0.0944449570063653,   rr: 0.001370, rrI: 0.582556244524433 } },
+    { a: 'Lactose', b: 'Mercury',
+      all:   { mp: 0.0015,   mpI: 0.0015,               rr: 0.0401,   rrI: 0.1782 },
+      y2016: { mp: 0.087219, mpI: 0.0388853239365454,   rr: 0.092849, rrI: 0.0553498290565432 },
+      y2022: { mp: 0.006103, mpI: 0.00240893544693823,  rr: 0.202863, rrI: 0.384586929513033 } },
+    { a: 'Lactose', b: 'Silicea',
+      all:   { mp: 0.5127,   mpI: 0.0006,               rr: 0.0132,   rrI: 0.3799 },
+      y2016: { mp: 0.093470, mpI: 0.127964055524115,    rr: 0.159347, rrI: 0.075852758208554 },
+      y2022: { mp: 0.015752, mpI: 0.00814719761626497,  rr: 0.027683, rrI: 0.748282707522894 } },
+    { a: 'Lactose', b: 'Stannum',
+      all:   { mp: 0.0021,   mpI: 0.0884,               rr: 0.0018,   rrI: 0.2560 },
+      y2016: { mp: 0.224293, mpI: 0.24240528266183,     rr: 0.004631, rrI: 0.146455813754185 },
+      y2022: { mp: 0.002269, mpI: 0.0792709631267857,   rr: 0.102758, rrI: 0.379825780905661 } },
+    { a: 'Lactose', b: 'Sulphur',
+      all:   { mp: 0.0636,   mpI: 0.0034,               rr: 0.0000,   rrI: 0.6389 },
+      y2016: { mp: 0.359367, mpI: 0.932820548796686,    rr: 0.006018, rrI: 0.363700860530703 },
+      y2022: { mp: 0.094644, mpI: 0.000184797297376648, rr: 0.0000920, rrI: 0.63257834046873 } },
+    { a: 'Mercury', b: 'Silicea',
+      all:   { mp: 0.0111,   mpI: 0.0003,               rr: 0.6640,   rrI: 0.7304 },
+      y2016: { mp: 0.000842, mpI: 0.000404393522728104, rr: 0.787481, rrI: 0.990949896488749 },
+      y2022: { mp: 0.736275, mpI: 0.282189574467008,    rr: 0.350852, rrI: 0.324811808862711 } },
+    { a: 'Mercury', b: 'Stannum',
+      all:   { mp: 0.9191,   mpI: 0.0466,               rr: 0.2915,   rrI: 0.4986 },
+      y2016: { mp: 0.616750, mpI: 0.197408497980374,    rr: 0.244096, rrI: 0.478268312830885 },
+      y2022: { mp: 0.747842, mpI: 0.0298212725053559,   rr: 0.747042, rrI: 0.338606691217483 } },
+    { a: 'Mercury', b: 'Sulphur',
+      all:   { mp: 0.1835,   mpI: 0.0019,               rr: 0.0134,   rrI: 0.4838 },
+      y2016: { mp: 0.423597, mpI: 0.0800611673576675,   rr: 0.290971, rrI: 0.389725592316079 },
+      y2022: { mp: 0.285143, mpI: 0.00144010810593489,  rr: 0.009609, rrI: 0.439311529387627 } },
+    { a: 'Silicea', b: 'Stannum',
+      all:   { mp: 0.0147,   mpI: 0.0220,               rr: 0.5394,   rrI: 0.3093 },
+      y2016: { mp: 0.004202, mpI: 0.00743381812233362,  rr: 0.152805, rrI: 0.503916730655366 },
+      y2022: { mp: 0.510552, mpI: 0.668729152592768,    rr: 0.524133, rrI: 0.263595959145007 } },
+    { a: 'Silicea', b: 'Sulphur',
+      all:   { mp: 0.2275,   mpI: 0.0063,               rr: 0.0431,   rrI: 0.3952 },
+      y2016: { mp: 0.010065, mpI: 0.0354224315790751,   rr: 0.185216, rrI: 0.540017978679575 },
+      y2022: { mp: 0.461781, mpI: 0.146792972202081,    rr: 0.106744, rrI: 0.183790772930379 } },
+    { a: 'Stannum', b: 'Sulphur',
+      all:   { mp: 0.2190,   mpI: 0.2991,               rr: 0.1563,   rrI: 0.7340 },
+      y2016: { mp: 0.763902, mpI: 0.454315097153331,    rr: 0.900940, rrI: 0.844137894886698 },
+      y2022: { mp: 0.165838, mpI: 0.166318858265129,    rr: 0.019815, rrI: 0.70764525837555 } },
+  ];
+
+  const edgeKey = (a, b) => [a, b].sort().join('|');
+  const edgeByKey = new Map(edgesData.map(e => [edgeKey(e.a, e.b), e]));
+
+  // ---- layout ----
+  const cx = 380, cy = 300, R = 220, r = 46;
+  const pos = {};
+  nodes.forEach((name, i) => {
+    const angle = (-90 + i * 60) * Math.PI / 180;
+    pos[name] = { x: cx + R * Math.cos(angle), y: cy + R * Math.sin(angle) };
+  });
+
+  const svgNS = 'http://www.w3.org/2000/svg';
+  const edgesG = document.getElementById('edges');
+  const nodesG = document.getElementById('nodes');
+
+  // ---- draw edges ----
+  const edgeEls = new Map();
+  edgesData.forEach(e => {
+    const p1 = pos[e.a], p2 = pos[e.b];
+    const dx = p2.x - p1.x, dy = p2.y - p1.y;
+    const dist = Math.sqrt(dx * dx + dy * dy);
+    const ux = dx / dist, uy = dy / dist;
+    const line = document.createElementNS(svgNS, 'line');
+    line.setAttribute('x1', p1.x + ux * r);
+    line.setAttribute('y1', p1.y + uy * r);
+    line.setAttribute('x2', p2.x - ux * r);
+    line.setAttribute('y2', p2.y - uy * r);
+    line.setAttribute('class', 'edge');
+    line.dataset.a = e.a;
+    line.dataset.b = e.b;
+    edgesG.appendChild(line);
+    edgeEls.set(edgeKey(e.a, e.b), line);
+  });
+
+  // ---- draw nodes ----
+  const nodeEls = new Map();
+  nodes.forEach(name => {
+    const p = pos[name];
+    const g = document.createElementNS(svgNS, 'g');
+    g.setAttribute('class', 'node');
+    g.dataset.name = name;
+    const circle = document.createElementNS(svgNS, 'circle');
+    circle.setAttribute('cx', p.x); circle.setAttribute('cy', p.y); circle.setAttribute('r', r);
+    const text = document.createElementNS(svgNS, 'text');
+    text.setAttribute('x', p.x); text.setAttribute('y', p.y + 4);
+    text.textContent = name;
+    g.appendChild(circle); g.appendChild(text);
+    nodesG.appendChild(g);
+    nodeEls.set(name, g);
+  });
+
+  // ---- significance logic (operates on one subset object: {mp,mpI,rr,rrI}) ----
+  const sig = v => v < 0.05;
+  const strong = v => v < 0.01;
+
+  // the p-value that "counts" for a given effect selection: a single value for
+  // potency/interaction, or the smaller (more significant) of the two for "either"
+  function pValueMP(s, effect) {
+    if (effect === 'potency') return s.mp;
+    if (effect === 'interaction') return s.mpI;
+    return Math.min(s.mp, s.mpI);
+  }
+  function pValueRR(s, effect) {
+    if (effect === 'potency') return s.rr;
+    if (effect === 'interaction') return s.rrI;
+    return Math.min(s.rr, s.rrI);
+  }
+  // classify a single subset ({mp,mpI,rr,rrI}) under the current measure/effect
+  function classify(s, measure, effect) {
+    const pMP = pValueMP(s, effect), pRR = pValueRR(s, effect);
+    const mp = sig(pMP), rr = sig(pRR);
+    let isSig, thick;
+    if (measure === 'either') {
+      isSig = mp || rr;
+      thick = (mp && strong(pMP)) || (rr && strong(pRR));
+    } else if (measure === 'maxprob') {
+      isSig = mp;
+      thick = mp && strong(pMP);
+    } else if (measure === 'ratio') {
+      isSig = rr;
+      thick = rr && strong(pRR);
+    } else {
+      isSig = mp && rr;
+      thick = isSig && strong(pMP) && strong(pRR);
+    }
+
+    let driver = 'none';
+    if (isSig) {
+      if (measure === 'maxprob') driver = 'mp';
+      else if (measure === 'ratio') driver = 'rr';
+      else if (measure === 'both') driver = 'both';
+      else driver = (mp && rr) ? 'both' : (mp ? 'mp' : 'rr');
+    }
+    return { isSig, driver, thick };
+  }
+
+  // classify an edge under the current Dataset/Measure/Effect settings.
+  // Combo mode compares the 2016 and 2022 subsets against each other, using
+  // the "all" classification only for its color/thickness — see plan notes.
+  function classifyEdge(edge, dataset, measure, effect) {
+    if (dataset === 'all')   return { ...classify(edge.all,   measure, effect), disagree: false };
+    if (dataset === 'y2016') return { ...classify(edge.y2016, measure, effect), disagree: false };
+    if (dataset === 'y2022') return { ...classify(edge.y2022, measure, effect), disagree: false };
+
+    // combo
+    const allC = classify(edge.all, measure, effect);
+    if (!allC.isSig) return { isSig: false, driver: 'none', thick: false, disagree: false };
+
+    const c2016 = classify(edge.y2016, measure, effect);
+    const c2022 = classify(edge.y2022, measure, effect);
+    if (c2016.isSig && c2022.isSig) {
+      return { isSig: true, driver: allC.driver, thick: allC.thick, disagree: false };
+    }
+    if (c2016.isSig !== c2022.isSig) {
+      return { isSig: true, driver: allC.driver, thick: allC.thick, disagree: true };
+    }
+    // both subsets agree it's NOT significant, even though "all" was
+    return { isSig: false, driver: 'none', thick: false, disagree: false };
+  }
+
+  function combinations3(arr) {
+    const out = [];
+    for (let i = 0; i < arr.length; i++)
+      for (let j = i + 1; j < arr.length; j++)
+        for (let k = j + 1; k < arr.length; k++)
+          out.push([arr[i], arr[j], arr[k]]);
+    return out;
+  }
+  const allTriangles = combinations3(nodes);
+
+  let state = { dataset: 'all', effect: 'potency', measure: 'either', selectedTriangle: null };
+
+  function render() {
+    const { dataset, effect, measure } = state;
+
+    // classify + paint edges
+    edgesData.forEach(e => {
+      const key = edgeKey(e.a, e.b);
+      const line = edgeEls.get(key);
+      const c = classifyEdge(e, dataset, measure, effect);
+      line.classList.remove('sig-mp', 'sig-rr', 'sig-both', 'sig-none');
+      line.classList.add(c.isSig ? ('sig-' + c.driver) : 'sig-none');
+      line.classList.toggle('thick', c.thick);
+      line.classList.toggle('disagree', c.disagree);
+      line._classification = c;
+    });
+
+    // find qualifying triangles
+    const qualifying = allTriangles.filter(t => {
+      const pairs = [[t[0], t[1]], [t[0], t[2]], [t[1], t[2]]];
+      return pairs.every(([x, y]) => {
+        const e = edgeByKey.get(edgeKey(x, y));
+        return classifyEdge(e, dataset, measure, effect).isSig;
+      });
+    });
+
+    document.getElementById('headline').innerHTML =
+      `<strong>${qualifying.length} of 20</strong> possible remedy trios are jointly significant — dataset: <strong>${datasetLabel(dataset)}</strong>, criterion: <strong>${effectLabel(effect)}</strong>, <strong>${measureLabel(measure)}</strong>.`;
+
+    // triangle list
+    const list = document.getElementById('tri-list');
+    list.innerHTML = '';
+    if (qualifying.length === 0) {
+      const empty = document.createElement('div');
+      empty.className = 'tri-empty';
+      empty.textContent = 'No trio is jointly significant under this criterion.';
+      list.appendChild(empty);
+    } else {
+      qualifying.forEach(t => {
+        const btn = document.createElement('button');
+        btn.className = 'tri-btn';
+        btn.textContent = t.join(' – ');
+        const tKey = t.slice().sort().join('|');
+        if (state.selectedTriangle === tKey) btn.classList.add('is-selected');
+        btn.addEventListener('click', () => {
+          state.selectedTriangle = (state.selectedTriangle === tKey) ? null : tKey;
+          applyHighlight();
+          render();
+        });
+        list.appendChild(btn);
+      });
+    }
+
+    applyHighlight();
+    renderTable();
+  }
+
+  function applyHighlight() {
+    const sel = state.selectedTriangle;
+    const activeNodes = sel ? new Set(sel.split('|')) : null;
+
+    nodeEls.forEach((g, name) => {
+      g.classList.toggle('is-dimmed', !!activeNodes && !activeNodes.has(name));
+      g.classList.toggle('is-active', !!activeNodes && activeNodes.has(name));
+    });
+    edgeEls.forEach((line, key) => {
+      const [x, y] = key.split('|');
+      const inTriangle = !!activeNodes && activeNodes.has(x) && activeNodes.has(y);
+      line.classList.toggle('is-dimmed', !!activeNodes && !inTriangle);
+      line.classList.toggle('is-active', inTriangle);
+    });
+  }
+
+  function datasetLabel(v) { return { all: 'All', y2016: '2016', y2022: '2022', combo: 'Combo' }[v]; }
+  function effectLabel(v) { return { potency: 'Potency', interaction: 'Interaction', either: 'Either effect' }[v]; }
+  function measureLabel(v) { return { either: 'either measure', maxprob: 'MaxProb only', ratio: 'Ratio only', both: 'both measures required' }[v]; }
+
+  // ---- tooltip: always shows all three subsets, regardless of the active
+  // Dataset toggle, so you can see exactly why Combo mode dashed an edge ----
+  const tooltip = document.getElementById('tooltip');
+  const panel = document.querySelector('.graph-panel');
+  function subsetRows(s) {
+    return `
+      <div class="t-row ${sig(s.mp) ? 'is-sig' : ''}">MaxProb potency: ${s.mp.toFixed(4)}</div>
+      <div class="t-row ${sig(s.mpI) ? 'is-sig' : ''}">MaxProb interaction: ${s.mpI.toFixed(4)}</div>
+      <div class="t-row ${sig(s.rr) ? 'is-sig' : ''}">Ratio potency: ${s.rr.toFixed(4)}</div>
+      <div class="t-row ${sig(s.rrI) ? 'is-sig' : ''}">Ratio interaction: ${s.rrI.toFixed(4)}</div>`;
+  }
+  edgeEls.forEach((line, key) => {
+    line.addEventListener('mousemove', (ev) => {
+      const e = edgeByKey.get(key);
+      const rect = panel.getBoundingClientRect();
+      tooltip.innerHTML = `
+        <div class="t-pair">${e.a} vs ${e.b}</div>
+        <div class="t-subset">All</div>${subsetRows(e.all)}
+        <div class="t-subset">2016 (AS)</div>${subsetRows(e.y2016)}
+        <div class="t-subset">2022 (JZ)</div>${subsetRows(e.y2022)}
+      `;
+      tooltip.style.left = (ev.clientX - rect.left + 14) + 'px';
+      tooltip.style.top = (ev.clientY - rect.top + 10) + 'px';
+      tooltip.classList.add('is-visible');
+    });
+    line.addEventListener('mouseleave', () => tooltip.classList.remove('is-visible'));
+  });
+
+  // ---- table ----
+  function renderTable() {
+    const tbody = document.querySelector('#data-table tbody');
+    tbody.innerHTML = '';
+    edgesData.forEach(e => {
+      const tr = document.createElement('tr');
+      const cell = (v, groupStart) => `<td class="${sig(v) ? 'sig' : ''}${groupStart ? ' group-all' : ''}">${v.toFixed(4)}</td>`;
+      tr.innerHTML =
+        `<td>${e.a} vs ${e.b}</td>` +
+        cell(e.all.mp, false)   + cell(e.all.mpI, false)   + cell(e.all.rr, false)   + cell(e.all.rrI, false) +
+        cell(e.y2016.mp, true)  + cell(e.y2016.mpI, false) + cell(e.y2016.rr, false) + cell(e.y2016.rrI, false) +
+        cell(e.y2022.mp, true)  + cell(e.y2022.mpI, false) + cell(e.y2022.rr, false) + cell(e.y2022.rrI, false);
+      tbody.appendChild(tr);
+    });
+  }
+
+  // ---- legend — each swatch is a real SVG line so dash patterns match the
+  // graph's edges exactly (a CSS border-dash renders differently from an
+  // SVG stroke-dasharray and doesn't line up with what's on the graph) ----
+  const legendItems = [
+    { stroke: 'var(--series-mp)',      width: 2,   dash: null,  label: 'Maximum Probability' },
+    { stroke: 'var(--series-rr)',      width: 2,   dash: null,  label: 'Root/Sprout Ratio' },
+    { stroke: 'var(--series-both)',    width: 2,   dash: null,  label: 'Both' },
+    { stroke: 'var(--gridline)',       width: 2,   dash: '3 4', label: 'Not significant' },
+    { stroke: 'var(--text-secondary)', width: 3.5, dash: null,  label: 'Thick = p < 0.01' },
+    { stroke: 'var(--text-secondary)', width: 2,   dash: '8 5', label: 'Combo: 2016 / 2022 disagree' },
+  ];
+  const legendEl = document.getElementById('legend');
+  legendItems.forEach(it => {
+    const row = document.createElement('div');
+    row.className = 'legend-item';
+
+    const swSvg = document.createElementNS(svgNS, 'svg');
+    swSvg.setAttribute('class', 'legend-swatch-svg');
+    swSvg.setAttribute('width', 24);
+    swSvg.setAttribute('height', 8);
+    const swLine = document.createElementNS(svgNS, 'line');
+    swLine.setAttribute('x1', 1); swLine.setAttribute('x2', 23);
+    swLine.setAttribute('y1', 4); swLine.setAttribute('y2', 4);
+    swLine.setAttribute('stroke', it.stroke);
+    swLine.setAttribute('stroke-width', it.width);
+    if (it.dash) swLine.setAttribute('stroke-dasharray', it.dash);
+    swSvg.appendChild(swLine);
+
+    const lbl = document.createElement('span');
+    lbl.textContent = it.label;
+    row.appendChild(swSvg); row.appendChild(lbl);
+    legendEl.appendChild(row);
+  });
+
+  // ---- controls ----
+  document.querySelectorAll('.segmented').forEach(group => {
+    const key = group.dataset.group;
+    group.querySelectorAll('button').forEach(btn => {
+      btn.addEventListener('click', () => {
+        group.querySelectorAll('button').forEach(b => b.classList.remove('is-selected'));
+        btn.classList.add('is-selected');
+        state[key] = btn.dataset.value;
+        state.selectedTriangle = null;
+        render();
+      });
+    });
+  });
+
+  render();
+})();
+</script>
