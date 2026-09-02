@@ -117,6 +117,13 @@
   details.table-wrap summary::before { content: "▸ "; }
   details.table-wrap[open] summary::before { content: "▾ "; }
   .table-scroll { overflow-x: auto; padding: 0 16px 16px; }
+  .note-text { padding: 0 16px 16px; font-size: 13px; line-height: 1.6; color: var(--text-secondary); max-width: 76ch; }
+  .note-text p { margin: 0 0 12px; }
+  .note-text strong { color: var(--text-primary); }
+  .note-text .note-table-wrap { overflow-x: auto; margin: 0 0 14px; }
+  .note-text h4 { font-size: 12px; color: var(--text-primary); margin: 18px 0 6px; }
+  .note-text h4:first-of-type { margin-top: 0; }
+  .note-text table { font-size: 11.5px; margin-bottom: 4px; }
   table { border-collapse: collapse; width: 100%; font-size: 11.5px; }
   th, td { text-align: left; padding: 5px 8px; border-bottom: 1px solid var(--gridline); white-space: nowrap; font-variant-numeric: tabular-nums; }
   th { color: var(--muted); font-weight: 600; font-size: 10px; text-transform: uppercase; letter-spacing: 0.03em; }
@@ -227,6 +234,82 @@
         </thead>
         <tbody></tbody>
       </table>
+    </div>
+  </details>
+
+  <details class="table-wrap">
+    <summary>Figure caption (Combo view)</summary>
+    <div class="note-text">
+      <p>Network representation of pairwise potency comparisons among the six remedies (Lactose, Stannum, Silicea, Sulphur, Ars. Album, Mercury) under the Combo view: each pair was tested three ways — once on the combined 2016+2022 dataset, and once independently within each year's subset (2016, 2022).</p>
+      <p>An edge connects two remedies whose <strong>combined-dataset</strong> potency effect was significant (<em>p</em> &lt; 0.05) in at least one of the two outcome measures — Maximum Probability or Root/Sprout Ratio. <strong>Edge colour</strong> shows which measure(s) drove that combined-data significance (yellow = Maximum Probability, green = Root/Sprout Ratio, pink = both); grey indicates no significant combined-data effect in either measure.</p>
+      <p><strong>Edge thickness</strong> reflects the strength of the combined-data effect: a thick edge denotes at least one of the two measures reaching <em>p</em> &lt; 0.01. This is an <em>at-least-one</em> rule even for pink ("both") edges — a thick, pink edge means both measures were significant (<em>p</em> &lt; 0.05), but only one of them necessarily reached the stricter <em>p</em> &lt; 0.01 threshold; it does not imply both measures were strongly significant.</p>
+      <p><strong>Edge style (solid vs. dashed)</strong> is independent of colour and thickness and instead reflects whether the two yearly subsets agree: a <strong>solid</strong> edge means 2016 and 2022 were independently significant for the same measure(s) driving the combined-data result. A <strong>dashed, coloured</strong> edge means the two years disagreed — only one of them reached significance on its own, even though the combined dataset did. A <strong>plain grey dashed</strong> edge means either the combined data was not significant, or — even where it was — neither year reached significance individually; in this last case the edge is greyed out regardless of what colour the combined data alone would otherwise suggest.</p>
+      <p><strong>Caveat:</strong> the thickness rule above describes the default "Either measure" setting. Under "Both measures required," a thick edge instead means both measures reached <em>p</em> &lt; 0.01, not just one.</p>
+    </div>
+  </details>
+
+  <details class="table-wrap">
+    <summary>Combined-significant edges where both years are individually non-significant</summary>
+    <div class="note-text">
+      <p>A handful of edges reach significance in the combined (All) analysis while <strong>neither</strong> the 2016 nor the 2022 subset is independently significant on its own. In Combo mode these render as plain grey dashed edges — visually identical to an edge with no significant combined-data effect at all — because Combo's colour and thickness are only meaningful once at least one year corroborates the combined result. Which edges this affects depends on the active Effect/Measure criterion; the breakdown below covers every combination.</p>
+
+      <h4>Potency, Either measure (the tool's default)</h4>
+      <p>None — no edge flips to grey under this criterion.</p>
+
+      <h4>Potency, Ratio only</h4>
+      <div class="note-table-wrap"><table>
+        <thead><tr><th>Pair</th><th>All RR</th><th>2016 RR</th><th>2022 RR</th></tr></thead>
+        <tbody>
+          <tr><td>Lactose – Mercury</td><td>0.0401</td><td>0.0928</td><td>0.2029</td></tr>
+          <tr><td>Silicea – Sulphur</td><td>0.0431</td><td>0.1852</td><td>0.1067</td></tr>
+        </tbody>
+      </table></div>
+
+      <h4>Potency, Both measures required</h4>
+      <div class="note-table-wrap"><table>
+        <thead><tr><th>Pair</th><th>All MP / RR</th><th>2016 MP / RR</th><th>2022 MP / RR</th></tr></thead>
+        <tbody>
+          <tr><td>Ars.Album – Stannum</td><td>0.0428 / 0.0201</td><td>0.7639 / 0.0171</td><td>0.0139 / 0.3663</td></tr>
+          <tr><td>Lactose – Mercury</td><td>0.0015 / 0.0401</td><td>0.0872 / 0.0928</td><td>0.0061 / 0.2029</td></tr>
+          <tr><td>Lactose – Stannum</td><td>0.0021 / 0.0018</td><td>0.2243 / 0.0046</td><td>0.0023 / 0.1028</td></tr>
+        </tbody>
+      </table></div>
+
+      <h4>Interaction, Both measures required</h4>
+      <div class="note-table-wrap"><table>
+        <thead><tr><th>Pair</th><th>All MP / RR</th><th>2016 MP / RR</th><th>2022 MP / RR</th></tr></thead>
+        <tbody>
+          <tr><td>Ars.Album – Silicea</td><td>0.0002 / 0.0328</td><td>0.0037 / 0.2808</td><td>0.1637 / 0.0134</td></tr>
+        </tbody>
+      </table></div>
+
+      <h4>Interaction, Either / MaxProb / Ratio only</h4>
+      <p>None.</p>
+
+      <h4>Either effect, Ratio only</h4>
+      <div class="note-table-wrap"><table>
+        <thead><tr><th>Pair</th><th>All RR</th><th>2016 RR</th><th>2022 RR</th></tr></thead>
+        <tbody>
+          <tr><td>Lactose – Mercury</td><td>0.0401</td><td>0.0553</td><td>0.2029</td></tr>
+          <tr><td>Silicea – Sulphur</td><td>0.0431</td><td>0.1852</td><td>0.1067</td></tr>
+        </tbody>
+      </table></div>
+
+      <h4>Either effect, Both measures required</h4>
+      <div class="note-table-wrap"><table>
+        <thead><tr><th>Pair</th><th>All MP / RR</th><th>2016 MP / RR</th><th>2022 MP / RR</th></tr></thead>
+        <tbody>
+          <tr><td>Ars.Album – Silicea</td><td>0.0002 / 0.0328</td><td>0.0037 / 0.2808</td><td>0.0697 / 0.0134</td></tr>
+          <tr><td>Lactose – Mercury</td><td>0.0015 / 0.0401</td><td>0.0389 / 0.0553</td><td>0.0024 / 0.2029</td></tr>
+          <tr><td>Lactose – Stannum</td><td>0.0021 / 0.0018</td><td>0.2243 / 0.0046</td><td>0.0023 / 0.1028</td></tr>
+          <tr><td>Silicea – Sulphur</td><td>0.0063 / 0.0431</td><td>0.0101 / 0.1852</td><td>0.1468 / 0.1067</td></tr>
+        </tbody>
+      </table></div>
+
+      <h4>Either effect, MaxProb only / Either measure</h4>
+      <p>None.</p>
+
+      <p>Two pairs recur across several criteria: <strong>Lactose–Mercury</strong> and <strong>Lactose–Stannum</strong> are the most fragile in this dataset — they flip to grey under multiple settings, consistently because one year (usually 2016) narrowly misses significance on Ratio while the pooled data and the other year both clear it. Worth flagging if the manuscript discusses statistical power or the effect of sample-splitting by year.</p>
     </div>
   </details>
 
