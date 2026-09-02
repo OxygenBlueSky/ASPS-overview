@@ -14,7 +14,6 @@
     --border:         rgba(0,0,0,0.15);
     --series-mp:      #FFC72C;
     --series-rr:      #00BD5F;
-    --series-both:    #E7298A;
   }
 
   .viz-root {
@@ -64,9 +63,9 @@
   .edge { fill: none; stroke: var(--gridline); stroke-width: 2; cursor: pointer; transition: opacity .15s ease, stroke-width .15s ease; }
   .edge.sig-mp   { stroke: var(--series-mp); }
   .edge.sig-rr   { stroke: var(--series-rr); }
-  .edge.sig-both { stroke: var(--series-both); }
   .edge.sig-none { stroke-dasharray: 3 4; }
   .edge.thick    { stroke-width: 3.5; }
+  .edge.is-hidden { display: none; }
   /* "disagree" (Combo mode: the two yearly subsets don't agree) uses a coarser
      dash than the "not significant" dash so the two read as visually distinct */
   .edge.disagree { stroke-dasharray: 8 5; }
@@ -169,7 +168,7 @@
 
 <div class="viz-root">
   <h1>Pairwise remedy significance — network view</h1>
-  <p class="subtitle">Each node is a remedy; each edge is one pairwise comparison. <strong>All</strong> is the omnibus pairwise ANOVA on the full combined dataset (2016 + 2022 together); <strong>2016</strong> and <strong>2022</strong> are the same post-hoc contrasts run within each year's subset alone. Choose the dataset, effect, and measure below. In <strong>Combo</strong>, an edge is dashed (but still colored) when the 2016 and 2022 subsets disagree on significance, and reverts to plain grey dashed if both subsets agree it's <em>not</em> significant — even when the combined All dataset was significant.</p>
+  <p class="subtitle">Each node is a remedy; each edge is one pairwise comparison — drawn as one colored line when only one measure is significant, or <strong>two parallel lines</strong> (yellow + green) when both Maximum Probability and Root/Sprout Ratio are significant, so the two measures are never blended into one color. <strong>All</strong> is the omnibus pairwise ANOVA on the full combined dataset (2016 + 2022 together); <strong>2016</strong> and <strong>2022</strong> are the same post-hoc contrasts run within each year's subset alone. Choose the dataset, effect, and measure below. In <strong>Combo</strong>, each measure's own line is dashed (but still colored) when the 2016 and 2022 subsets disagree on significance for that measure specifically, and that line is omitted entirely if both subsets agree it's <em>not</em> significant — even when the combined All dataset was significant for it.</p>
 
   <div class="manuscript-toggle-row">
     <button class="btn-manuscript" id="manuscript-toggle">Manuscript view</button>
@@ -248,75 +247,24 @@
     <summary>Figure caption (Combo view)</summary>
     <div class="note-text">
       <p>Network representation of pairwise potency comparisons among the six remedies (Lactose, Stannum, Silicea, Sulphur, Ars. Album, Mercury) under the Combo view: each pair was tested three ways — once on the combined 2016+2022 dataset, and once independently within each year's subset (2016, 2022).</p>
-      <p>An edge connects two remedies whose <strong>combined-dataset</strong> potency effect was significant (<em>p</em> &lt; 0.05) in at least one of the two outcome measures — Maximum Probability or Root/Sprout Ratio. <strong>Edge colour</strong> shows which measure(s) drove that combined-data significance (yellow = Maximum Probability, green = Root/Sprout Ratio, pink = both); grey indicates no significant combined-data effect in either measure.</p>
-      <p><strong>Edge thickness</strong> reflects the strength of the combined-data effect: a thick edge denotes at least one of the two measures reaching <em>p</em> &lt; 0.01. This is an <em>at-least-one</em> rule even for pink ("both") edges — a thick, pink edge means both measures were significant (<em>p</em> &lt; 0.05), but only one of them necessarily reached the stricter <em>p</em> &lt; 0.01 threshold; it does not imply both measures were strongly significant.</p>
-      <p><strong>Edge style (solid vs. dashed)</strong> is independent of colour and thickness and instead reflects whether the two yearly subsets agree: a <strong>solid</strong> edge means 2016 and 2022 were independently significant for the same measure(s) driving the combined-data result. A <strong>dashed, coloured</strong> edge means the two years disagreed — only one of them reached significance on its own, even though the combined dataset did. A <strong>plain grey dashed</strong> edge means either the combined data was not significant, or — even where it was — neither year reached significance individually; in this last case the edge is greyed out regardless of what colour the combined data alone would otherwise suggest.</p>
-      <p><strong>Caveat:</strong> the thickness rule above describes the default "Either measure" setting. Under "Both measures required," a thick edge instead means both measures reached <em>p</em> &lt; 0.01, not just one.</p>
+      <p>Each of the two outcome measures — Maximum Probability and Root/Sprout Ratio — is drawn as its <strong>own line</strong>: yellow for Maximum Probability, green for Root/Sprout Ratio. When only one measure is significant for a pair, a single colored line is shown. When <strong>both</strong> measures are significant, two parallel lines are drawn side by side rather than blending the two into one color — this keeps the two measures' evidence fully separable rather than compressing them into a single visual channel. A pair with neither measure significant is shown as a single plain grey dashed line.</p>
+      <p><strong>Line thickness</strong> reflects the strength of that specific measure's combined-data effect: a thick line denotes that measure reaching <em>p</em> &lt; 0.01 on its own. Because each measure now has its own line, thickness is unambiguous — a thick yellow line always means Maximum Probability itself reached <em>p</em> &lt; 0.01, regardless of what Root/Sprout Ratio is doing.</p>
+      <p><strong>Line style (solid vs. dashed)</strong> is evaluated per measure and reflects whether the two yearly subsets agree on <em>that measure specifically</em>: a <strong>solid</strong> line means 2016 and 2022 were both independently significant for that measure. A <strong>dashed</strong> line means the two years disagreed — only one of them reached significance for that measure on its own, even though the combined dataset did. If a measure is significant in the combined data but <strong>neither</strong> year individually corroborates it, that measure's line is omitted entirely rather than drawn with false confidence — see the next section for exactly which cases this affects.</p>
     </div>
   </details>
 
   <details class="table-wrap">
-    <summary>Combined-significant edges where both years are individually non-significant</summary>
+    <summary>Lines omitted: combined-significant but neither year individually significant</summary>
     <div class="note-text">
-      <p>A handful of edges reach significance in the combined (All) analysis while <strong>neither</strong> the 2016 nor the 2022 subset is independently significant on its own. In Combo mode these render as plain grey dashed edges — visually identical to an edge with no significant combined-data effect at all — because Combo's colour and thickness are only meaningful once at least one year corroborates the combined result. Which edges this affects depends on the active Effect/Measure criterion; the breakdown below covers every combination.</p>
-
-      <h4>Potency, Either measure (the tool's default)</h4>
-      <p>None — no edge flips to grey under this criterion.</p>
-
-      <h4>Potency, Ratio only</h4>
+      <p>A measure's line is only drawn in Combo mode when the combined (All) data is significant for it. Two (pair, measure) combinations reach significance in the combined analysis while <strong>neither</strong> the 2016 nor the 2022 subset is independently significant for that same measure on its own — in both cases the other measure (Maximum Probability) is unaffected and still draws normally if significant.</p>
       <div class="note-table-wrap"><table>
-        <thead><tr><th>Pair</th><th>All RR</th><th>2016 RR</th><th>2022 RR</th></tr></thead>
+        <thead><tr><th>Pair</th><th>Measure</th><th>Effect</th><th>All <em>p</em></th><th>2016 <em>p</em></th><th>2022 <em>p</em></th></tr></thead>
         <tbody>
-          <tr><td>Lactose – Mercury</td><td>0.0401</td><td>0.0928</td><td>0.2029</td></tr>
-          <tr><td>Silicea – Sulphur</td><td>0.0431</td><td>0.1852</td><td>0.1067</td></tr>
+          <tr><td>Lactose – Mercury</td><td>Ratio</td><td>Potency</td><td>0.0401</td><td>0.0928</td><td>0.2029</td></tr>
+          <tr><td>Silicea – Sulphur</td><td>Ratio</td><td>Potency</td><td>0.0431</td><td>0.1852</td><td>0.1067</td></tr>
         </tbody>
       </table></div>
-
-      <h4>Potency, Both measures required</h4>
-      <div class="note-table-wrap"><table>
-        <thead><tr><th>Pair</th><th>All MP / RR</th><th>2016 MP / RR</th><th>2022 MP / RR</th></tr></thead>
-        <tbody>
-          <tr><td>Ars.Album – Stannum</td><td>0.0428 / 0.0201</td><td>0.7639 / 0.0171</td><td>0.0139 / 0.3663</td></tr>
-          <tr><td>Lactose – Mercury</td><td>0.0015 / 0.0401</td><td>0.0872 / 0.0928</td><td>0.0061 / 0.2029</td></tr>
-          <tr><td>Lactose – Stannum</td><td>0.0021 / 0.0018</td><td>0.2243 / 0.0046</td><td>0.0023 / 0.1028</td></tr>
-        </tbody>
-      </table></div>
-
-      <h4>Interaction, Both measures required</h4>
-      <div class="note-table-wrap"><table>
-        <thead><tr><th>Pair</th><th>All MP / RR</th><th>2016 MP / RR</th><th>2022 MP / RR</th></tr></thead>
-        <tbody>
-          <tr><td>Ars.Album – Silicea</td><td>0.0002 / 0.0328</td><td>0.0037 / 0.2808</td><td>0.1637 / 0.0134</td></tr>
-        </tbody>
-      </table></div>
-
-      <h4>Interaction, Either / MaxProb / Ratio only</h4>
-      <p>None.</p>
-
-      <h4>Either effect, Ratio only</h4>
-      <div class="note-table-wrap"><table>
-        <thead><tr><th>Pair</th><th>All RR</th><th>2016 RR</th><th>2022 RR</th></tr></thead>
-        <tbody>
-          <tr><td>Lactose – Mercury</td><td>0.0401</td><td>0.0553</td><td>0.2029</td></tr>
-          <tr><td>Silicea – Sulphur</td><td>0.0431</td><td>0.1852</td><td>0.1067</td></tr>
-        </tbody>
-      </table></div>
-
-      <h4>Either effect, Both measures required</h4>
-      <div class="note-table-wrap"><table>
-        <thead><tr><th>Pair</th><th>All MP / RR</th><th>2016 MP / RR</th><th>2022 MP / RR</th></tr></thead>
-        <tbody>
-          <tr><td>Ars.Album – Silicea</td><td>0.0002 / 0.0328</td><td>0.0037 / 0.2808</td><td>0.0697 / 0.0134</td></tr>
-          <tr><td>Lactose – Mercury</td><td>0.0015 / 0.0401</td><td>0.0389 / 0.0553</td><td>0.0024 / 0.2029</td></tr>
-          <tr><td>Lactose – Stannum</td><td>0.0021 / 0.0018</td><td>0.2243 / 0.0046</td><td>0.0023 / 0.1028</td></tr>
-          <tr><td>Silicea – Sulphur</td><td>0.0063 / 0.0431</td><td>0.0101 / 0.1852</td><td>0.1468 / 0.1067</td></tr>
-        </tbody>
-      </table></div>
-
-      <h4>Either effect, MaxProb only / Either measure</h4>
-      <p>None.</p>
-
-      <p>Two pairs recur across several criteria: <strong>Lactose–Mercury</strong> and <strong>Lactose–Stannum</strong> are the most fragile in this dataset — they flip to grey under multiple settings, consistently because one year (usually 2016) narrowly misses significance on Ratio while the pooled data and the other year both clear it. Worth flagging if the manuscript discusses statistical power or the effect of sample-splitting by year.</p>
+      <p>Both cases are Ratio, potency — in each, the combined dataset and one year individually sit close to significant while the other year is clearly not, so pooling the two years' data is doing real work here rather than just adding power uniformly. Worth flagging if the manuscript discusses statistical power or the effect of sample-splitting by year.</p>
     </div>
   </details>
 
@@ -402,35 +350,61 @@
   const edgeKey = (a, b) => [a, b].sort().join('|');
   const edgeByKey = new Map(edgesData.map(e => [edgeKey(e.a, e.b), e]));
 
-  // ---- layout ----
+  // ---- geometry helpers ----
+  // Two measures showing significant at once are drawn as two parallel lines
+  // rather than one blended color (no more "pink" — see the figure-caption
+  // foldout below for why). Translating the SAME trimmed segment by a fixed
+  // perpendicular offset keeps the two lines exactly parallel, so they can
+  // never cross each other, and they stay the same distance apart all the
+  // way to each node's circle boundary.
+  function buildPositions(cxIn, cyIn, Rin) {
+    const p = {};
+    nodes.forEach((name, i) => {
+      const angle = (-90 + i * 60) * Math.PI / 180;
+      p[name] = { x: cxIn + Rin * Math.cos(angle), y: cyIn + Rin * Math.sin(angle) };
+    });
+    return p;
+  }
+  function edgeGeometry(posMap, a, b, radius) {
+    const p1 = posMap[a], p2 = posMap[b];
+    const dx = p2.x - p1.x, dy = p2.y - p1.y;
+    const dist = Math.sqrt(dx * dx + dy * dy);
+    const ux = dx / dist, uy = dy / dist;
+    return {
+      a1: { x: p1.x + ux * radius, y: p1.y + uy * radius },
+      a2: { x: p2.x - ux * radius, y: p2.y - uy * radius },
+      perp: { x: -uy, y: ux },
+    };
+  }
+  const LINE_OFFSET = 3.5; // px each line shifts from the centerline when both measures are shown
+
+  // ---- layout (interactive graph) ----
   const cx = 380, cy = 300, R = 220, r = 46;
-  const pos = {};
-  nodes.forEach((name, i) => {
-    const angle = (-90 + i * 60) * Math.PI / 180;
-    pos[name] = { x: cx + R * Math.cos(angle), y: cy + R * Math.sin(angle) };
-  });
+  const pos = buildPositions(cx, cy, R);
 
   const svgNS = 'http://www.w3.org/2000/svg';
   const edgesG = document.getElementById('edges');
   const nodesG = document.getElementById('nodes');
 
-  // ---- draw edges ----
-  const edgeEls = new Map();
-  edgesData.forEach(e => {
-    const p1 = pos[e.a], p2 = pos[e.b];
-    const dx = p2.x - p1.x, dy = p2.y - p1.y;
-    const dist = Math.sqrt(dx * dx + dy * dy);
-    const ux = dx / dist, uy = dy / dist;
+  // ---- draw edges: 3 <line> elements per pair (grey / MaxProb / Ratio),
+  // always present in the DOM — render() toggles which are visible rather
+  // than creating/destroying elements every time a toggle changes ----
+  function makeLine(parent, a, b) {
     const line = document.createElementNS(svgNS, 'line');
-    line.setAttribute('x1', p1.x + ux * r);
-    line.setAttribute('y1', p1.y + uy * r);
-    line.setAttribute('x2', p2.x - ux * r);
-    line.setAttribute('y2', p2.y - uy * r);
-    line.setAttribute('class', 'edge');
-    line.dataset.a = e.a;
-    line.dataset.b = e.b;
-    edgesG.appendChild(line);
-    edgeEls.set(edgeKey(e.a, e.b), line);
+    line.dataset.a = a; line.dataset.b = b;
+    parent.appendChild(line);
+    return line;
+  }
+  const edgeGeom = new Map(); // key -> {a1,a2,perp}
+  const edgeEls = new Map();  // key -> {grey, mp, rr}
+  edgesData.forEach(e => {
+    const key = edgeKey(e.a, e.b);
+    edgeGeom.set(key, edgeGeometry(pos, e.a, e.b, r));
+    edgeEls.set(key, {
+      grey: makeLine(edgesG, e.a, e.b),
+      mp:   makeLine(edgesG, e.a, e.b),
+      rr:   makeLine(edgesG, e.a, e.b),
+    });
   });
 
   // ---- draw nodes ----
@@ -466,57 +440,76 @@
     if (effect === 'interaction') return s.rrI;
     return Math.min(s.rr, s.rrI);
   }
-  // classify a single subset ({mp,mpI,rr,rrI}) under the current measure/effect
-  function classify(s, measure, effect) {
-    const pMP = pValueMP(s, effect), pRR = pValueRR(s, effect);
-    const mp = sig(pMP), rr = sig(pRR);
-    let isSig, thick;
-    if (measure === 'either') {
-      isSig = mp || rr;
-      thick = (mp && strong(pMP)) || (rr && strong(pRR));
-    } else if (measure === 'maxprob') {
-      isSig = mp;
-      thick = mp && strong(pMP);
-    } else if (measure === 'ratio') {
-      isSig = rr;
-      thick = rr && strong(pRR);
-    } else {
-      isSig = mp && rr;
-      thick = isSig && strong(pMP) && strong(pRR);
-    }
 
-    let driver = 'none';
-    if (isSig) {
-      if (measure === 'maxprob') driver = 'mp';
-      else if (measure === 'ratio') driver = 'rr';
-      else if (measure === 'both') driver = 'both';
-      else driver = (mp && rr) ? 'both' : (mp ? 'mp' : 'rr');
-    }
-    return { isSig, driver, thick };
+  // The visual state of ONE measure's line for an edge, under the current
+  // Dataset/Effect setting. Returns null when this measure's line shouldn't
+  // be drawn at all — not significant, or (in Combo) significant overall but
+  // neither year individually corroborates it, in which case this measure's
+  // line is simply omitted rather than shown with false confidence.
+  function lineState(pValueFn, edge, dataset, effect) {
+    const pOf = k => pValueFn(edge[k], effect);
+    if (dataset === 'all')   return sig(pOf('all'))   ? { thick: strong(pOf('all')) }   : null;
+    if (dataset === 'y2016') return sig(pOf('y2016')) ? { thick: strong(pOf('y2016')) } : null;
+    if (dataset === 'y2022') return sig(pOf('y2022')) ? { thick: strong(pOf('y2022')) } : null;
+    // combo
+    if (!sig(pOf('all'))) return null;
+    const s16 = sig(pOf('y2016')), s22 = sig(pOf('y2022'));
+    const thick = strong(pOf('all'));
+    if (s16 && s22) return { thick, disagree: false };
+    if (s16 !== s22) return { thick, disagree: true };
+    return null; // both years null — not corroborated by either
   }
 
-  // classify an edge under the current Dataset/Measure/Effect settings.
-  // Combo mode compares the 2016 and 2022 subsets against each other, using
-  // the "all" classification only for its color/thickness — see plan notes.
-  function classifyEdge(edge, dataset, measure, effect) {
-    if (dataset === 'all')   return { ...classify(edge.all,   measure, effect), disagree: false };
-    if (dataset === 'y2016') return { ...classify(edge.y2016, measure, effect), disagree: false };
-    if (dataset === 'y2022') return { ...classify(edge.y2022, measure, effect), disagree: false };
+  // Which of the (up to 2) measure lines should actually be drawn for an
+  // edge, given the Measure setting. Each measure is evaluated fully
+  // independently — this is what replaces the old "driver" concept.
+  function edgeLines(edge, dataset, measure, effect) {
+    const mp = lineState(pValueMP, edge, dataset, effect);
+    const rr = lineState(pValueRR, edge, dataset, effect);
+    if (measure === 'maxprob') return { mp, rr: null };
+    if (measure === 'ratio')   return { mp: null, rr };
+    if (measure === 'either')  return { mp, rr };
+    // both measures required: only counts if BOTH clear their own bar
+    return (mp && rr) ? { mp, rr } : { mp: null, rr: null };
+  }
 
-    // combo
-    const allC = classify(edge.all, measure, effect);
-    if (!allC.isSig) return { isSig: false, driver: 'none', thick: false, disagree: false };
+  // Builds a full class string for one of an edge's 3 <line> elements.
+  function edgeClass(base, visible, opts) {
+    const cls = ['edge', base];
+    if (!visible) cls.push('is-hidden');
+    if (opts.thick) cls.push('thick');
+    if (opts.disagree) cls.push('disagree');
+    if (opts.active) cls.push('is-active');
+    if (opts.dimmed) cls.push('is-dimmed');
+    return cls.join(' ');
+  }
 
-    const c2016 = classify(edge.y2016, measure, effect);
-    const c2022 = classify(edge.y2022, measure, effect);
-    if (c2016.isSig && c2022.isSig) {
-      return { isSig: true, driver: allC.driver, thick: allC.thick, disagree: false };
+  // Paints one edge's up-to-3 lines from precomputed geometry + line states.
+  // Shared by the interactive graph and the manuscript view so the two can
+  // never draw differently from each other.
+  function paintEdgeLines(els, geom, mpState, rrState, offset, activeState) {
+    const { a1, a2, perp } = geom;
+    const showBoth = !!(mpState && rrState);
+    const ox = showBoth ? perp.x * offset : 0, oy = showBoth ? perp.y * offset : 0;
+
+    function place(line, dx, dy) {
+      line.setAttribute('x1', a1.x + dx); line.setAttribute('y1', a1.y + dy);
+      line.setAttribute('x2', a2.x + dx); line.setAttribute('y2', a2.y + dy);
     }
-    if (c2016.isSig !== c2022.isSig) {
-      return { isSig: true, driver: allC.driver, thick: allC.thick, disagree: true };
-    }
-    // both subsets agree it's NOT significant, even though "all" was
-    return { isSig: false, driver: 'none', thick: false, disagree: false };
+
+    const showGrey = !mpState && !rrState;
+    place(els.grey, 0, 0);
+    els.grey.setAttribute('class', edgeClass('sig-none', showGrey, activeState));
+
+    place(els.mp, ox, oy);
+    els.mp.setAttribute('class', edgeClass('sig-mp', !!mpState, {
+      ...activeState, thick: mpState && mpState.thick, disagree: mpState && mpState.disagree,
+    }));
+
+    place(els.rr, -ox, -oy);
+    els.rr.setAttribute('class', edgeClass('sig-rr', !!rrState, {
+      ...activeState, thick: rrState && rrState.thick, disagree: rrState && rrState.disagree,
+    }));
   }
 
   function combinations3(arr) {
@@ -531,19 +524,28 @@
 
   let state = { dataset: 'all', effect: 'potency', measure: 'either', selectedTriangle: null };
 
+  function edgeIsSignificant(edge, dataset, measure, effect) {
+    const { mp, rr } = edgeLines(edge, dataset, measure, effect);
+    return !!(mp || rr);
+  }
+
   function render() {
     const { dataset, effect, measure } = state;
+    const activeNodes = state.selectedTriangle ? new Set(state.selectedTriangle.split('|')) : null;
 
     // classify + paint edges
     edgesData.forEach(e => {
       const key = edgeKey(e.a, e.b);
-      const line = edgeEls.get(key);
-      const c = classifyEdge(e, dataset, measure, effect);
-      line.classList.remove('sig-mp', 'sig-rr', 'sig-both', 'sig-none');
-      line.classList.add(c.isSig ? ('sig-' + c.driver) : 'sig-none');
-      line.classList.toggle('thick', c.thick);
-      line.classList.toggle('disagree', c.disagree);
-      line._classification = c;
+      const { mp, rr } = edgeLines(e, dataset, measure, effect);
+      const inTriangle = activeNodes ? (activeNodes.has(e.a) && activeNodes.has(e.b)) : null;
+      const activeState = activeNodes ? { active: inTriangle, dimmed: !inTriangle } : {};
+      paintEdgeLines(edgeEls.get(key), edgeGeom.get(key), mp, rr, LINE_OFFSET, activeState);
+    });
+
+    // node dimming/highlighting
+    nodeEls.forEach((g, name) => {
+      g.classList.toggle('is-dimmed', !!activeNodes && !activeNodes.has(name));
+      g.classList.toggle('is-active', !!activeNodes && activeNodes.has(name));
     });
 
     // find qualifying triangles
@@ -551,7 +553,7 @@
       const pairs = [[t[0], t[1]], [t[0], t[2]], [t[1], t[2]]];
       return pairs.every(([x, y]) => {
         const e = edgeByKey.get(edgeKey(x, y));
-        return classifyEdge(e, dataset, measure, effect).isSig;
+        return edgeIsSignificant(e, dataset, measure, effect);
       });
     });
 
@@ -575,31 +577,13 @@
         if (state.selectedTriangle === tKey) btn.classList.add('is-selected');
         btn.addEventListener('click', () => {
           state.selectedTriangle = (state.selectedTriangle === tKey) ? null : tKey;
-          applyHighlight();
           render();
         });
         list.appendChild(btn);
       });
     }
 
-    applyHighlight();
     renderTable();
-  }
-
-  function applyHighlight() {
-    const sel = state.selectedTriangle;
-    const activeNodes = sel ? new Set(sel.split('|')) : null;
-
-    nodeEls.forEach((g, name) => {
-      g.classList.toggle('is-dimmed', !!activeNodes && !activeNodes.has(name));
-      g.classList.toggle('is-active', !!activeNodes && activeNodes.has(name));
-    });
-    edgeEls.forEach((line, key) => {
-      const [x, y] = key.split('|');
-      const inTriangle = !!activeNodes && activeNodes.has(x) && activeNodes.has(y);
-      line.classList.toggle('is-dimmed', !!activeNodes && !inTriangle);
-      line.classList.toggle('is-active', inTriangle);
-    });
   }
 
   function datasetLabel(v) { return { all: 'All', y2016: '2016', y2022: '2022', combo: 'Combo' }[v]; }
@@ -617,9 +601,9 @@
       <div class="t-row ${sig(s.rr) ? 'is-sig' : ''}">Ratio potency: ${s.rr.toFixed(4)}</div>
       <div class="t-row ${sig(s.rrI) ? 'is-sig' : ''}">Ratio interaction: ${s.rrI.toFixed(4)}</div>`;
   }
-  edgeEls.forEach((line, key) => {
-    line.addEventListener('mousemove', (ev) => {
-      const e = edgeByKey.get(key);
+  edgeEls.forEach((els, key) => {
+    const e = edgeByKey.get(key);
+    const showTooltip = (ev) => {
       const rect = panel.getBoundingClientRect();
       tooltip.innerHTML = `
         <div class="t-pair">${e.a} vs ${e.b}</div>
@@ -630,8 +614,14 @@
       tooltip.style.left = (ev.clientX - rect.left + 14) + 'px';
       tooltip.style.top = (ev.clientY - rect.top + 10) + 'px';
       tooltip.classList.add('is-visible');
+    };
+    const hideTooltip = () => tooltip.classList.remove('is-visible');
+    // shared hover region: whichever of the up-to-3 lines is actually
+    // visible shows the same tooltip (hidden lines don't receive events)
+    [els.grey, els.mp, els.rr].forEach(line => {
+      line.addEventListener('mousemove', showTooltip);
+      line.addEventListener('mouseleave', hideTooltip);
     });
-    line.addEventListener('mouseleave', () => tooltip.classList.remove('is-visible'));
   });
 
   // ---- table ----
@@ -656,7 +646,6 @@
   const legendItems = [
     { stroke: 'var(--series-mp)',      width: 2,   dash: null,  label: 'Maximum Probability' },
     { stroke: 'var(--series-rr)',      width: 2,   dash: null,  label: 'Root/Sprout Ratio' },
-    { stroke: 'var(--series-both)',    width: 2,   dash: null,  label: 'Both' },
     { stroke: 'var(--gridline)',       width: 2,   dash: '3 4', label: 'Not significant' },
     { stroke: 'var(--text-secondary)', width: 3.5, dash: null,  label: 'Thick = p < 0.01' },
     { stroke: 'var(--text-secondary)', width: 2,   dash: '8 5', label: 'Combo: 2016 / 2022 disagree' },
@@ -685,19 +674,11 @@
   });
 
   // ---- manuscript view: a tight, side-legend layout built on demand from
-  // the SAME state/edgesData/classifyEdge() used above, so it can't drift
-  // out of sync with the interactive graph. Re-rendered only when the
-  // toggle is clicked (not on every interactive render()), since it's a
-  // frozen snapshot for exporting, not a live view. ----
-  const MS_CX = 177, MS_CY = 197, MS_R = 147, MS_r = 42;
-  function buildManuscriptPositions() {
-    const p = {};
-    nodes.forEach((name, i) => {
-      const angle = (-90 + i * 60) * Math.PI / 180;
-      p[name] = { x: MS_CX + MS_R * Math.cos(angle), y: MS_CY + MS_R * Math.sin(angle) };
-    });
-    return p;
-  }
+  // the SAME state/edgesData/edgeLines()/paintEdgeLines() used above, so it
+  // can't drift out of sync with the interactive graph. Re-rendered only
+  // when the toggle is clicked (not on every interactive render()), since
+  // it's a frozen snapshot for exporting, not a live view. ----
+  const MS_CX = 177, MS_CY = 197, MS_R = 147, MS_r = 42, MS_LINE_OFFSET = 3.5;
   function renderLegendInto(container, items) {
     container.innerHTML = '';
     items.forEach(it => {
@@ -722,7 +703,7 @@
   }
   function renderManuscriptView() {
     const { dataset, effect, measure, selectedTriangle } = state;
-    const msPos = buildManuscriptPositions();
+    const msPos = buildPositions(MS_CX, MS_CY, MS_R);
     const activeNodes = selectedTriangle ? new Set(selectedTriangle.split('|')) : null;
 
     const svg = document.getElementById('ms-svg');
@@ -731,23 +712,20 @@
     const nodesG2 = document.createElementNS(svgNS, 'g');
 
     edgesData.forEach(e => {
-      const p1 = msPos[e.a], p2 = msPos[e.b];
-      const dx = p2.x - p1.x, dy = p2.y - p1.y;
-      const dist = Math.sqrt(dx * dx + dy * dy);
-      const ux = dx / dist, uy = dy / dist;
-      const c = classifyEdge(e, dataset, measure, effect);
+      const geom = edgeGeometry(msPos, e.a, e.b, MS_r);
+      const { mp, rr } = edgeLines(e, dataset, measure, effect);
+      const inTriangle = activeNodes ? (activeNodes.has(e.a) && activeNodes.has(e.b)) : null;
+      const activeState = activeNodes ? { active: inTriangle, dimmed: !inTriangle } : {};
 
-      const line = document.createElementNS(svgNS, 'line');
-      line.setAttribute('x1', p1.x + ux * MS_r);
-      line.setAttribute('y1', p1.y + uy * MS_r);
-      line.setAttribute('x2', p2.x - ux * MS_r);
-      line.setAttribute('y2', p2.y - uy * MS_r);
-      let cls = 'edge ' + (c.isSig ? ('sig-' + c.driver) : 'sig-none');
-      if (c.thick) cls += ' thick';
-      if (c.disagree) cls += ' disagree';
-      if (activeNodes) cls += (activeNodes.has(e.a) && activeNodes.has(e.b)) ? ' is-active' : ' is-dimmed';
-      line.setAttribute('class', cls);
-      edgesG2.appendChild(line);
+      const els = {
+        grey: document.createElementNS(svgNS, 'line'),
+        mp: document.createElementNS(svgNS, 'line'),
+        rr: document.createElementNS(svgNS, 'line'),
+      };
+      paintEdgeLines(els, geom, mp, rr, MS_LINE_OFFSET, activeState);
+      [els.grey, els.mp, els.rr].forEach(line => {
+        if (!line.classList.contains('is-hidden')) edgesG2.appendChild(line);
+      });
     });
 
     nodes.forEach(name => {
