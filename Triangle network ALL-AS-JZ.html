@@ -71,8 +71,15 @@
      dash than the "not significant" dash so the two read as visually distinct */
   .edge.disagree { stroke-dasharray: 8 5; }
   .edge.is-dimmed { opacity: 0.16; }
-  .edge.is-active { stroke-width: 5; opacity: 1; }
-  .edge:hover { opacity: 1; stroke-width: 5; }
+  /* Bump thickness on highlight/hover, but keep it relative to the edge's own
+     thin/thick state — a flat override here would erase the p<0.01 distinction
+     for every trio-highlighted or hovered edge. */
+  .edge.is-active { opacity: 1; }
+  .edge.is-active:not(.thick) { stroke-width: 3.5; }
+  .edge.is-active.thick { stroke-width: 5; }
+  .edge:hover { opacity: 1; }
+  .edge:hover:not(.thick) { stroke-width: 3.5; }
+  .edge:hover.thick { stroke-width: 5; }
 
   .node circle { fill: var(--surface-1); stroke: var(--node-stroke); stroke-width: 1.5; }
   .node text { fill: var(--text-primary); font-size: 13px; font-weight: 600; text-anchor: middle; }
