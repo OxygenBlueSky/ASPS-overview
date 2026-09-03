@@ -13,7 +13,7 @@
     --node-stroke:    #000000;
     --border:         rgba(0,0,0,0.15);
     --series-mp:      #FFC72C;
-    --series-rr:      #00BD5F;
+    --series-rr:      #E7298A;
   }
 
   .viz-root {
@@ -174,7 +174,7 @@
 
 <div class="viz-root">
   <h1>Pairwise remedy significance — network view</h1>
-  <p class="subtitle">Each node is a remedy; each edge is one pairwise comparison — drawn as one colored line when only one measure is significant, or <strong>two parallel lines</strong> (yellow + green) when both Maximum Probability and Root/Sprout Ratio are significant. <strong>All</strong> is the omnibus pairwise ANOVA on the full combined dataset (2016 + 2022 together); <strong>2016</strong> and <strong>2022</strong> are the same post-hoc contrasts run within each year's subset alone. Choose the dataset, effect, and measure below. In <strong>Combo</strong>, a line is shown for every measure significant in the combined data — same as All — with its style layering on year-agreement: solid if both 2016 and 2022 corroborate it, dashed if only one does, or a faint dotted line (same weight as "not significant") if neither individually does.</p>
+  <p class="subtitle">Each node is a remedy; each edge is one pairwise comparison — drawn as one colored line when only one measure is significant, or <strong>two parallel lines</strong> (yellow + pink) when both Maximum Probability and Root/Sprout Ratio are significant. <strong>All</strong> is the omnibus pairwise ANOVA on the full combined dataset (2016 + 2022 together); <strong>2016</strong> and <strong>2022</strong> are the same post-hoc contrasts run within each year's subset alone. Choose the dataset, effect, and measure below. In <strong>Combo</strong>, a line is shown for every measure significant in the combined data — same as All — with its style layering on year-agreement: solid if both 2016 and 2022 corroborate it, dashed if only one does, or a faint dotted line (same weight as "not significant") if neither individually does.</p>
 
   <div class="manuscript-toggle-row">
     <button class="btn-manuscript" id="manuscript-toggle">Manuscript view</button>
@@ -253,7 +253,7 @@
     <summary>Figure caption (Combo view)</summary>
     <div class="note-text">
       <p>Network representation of pairwise potency comparisons among the six remedies (Lactose, Stannum, Silicea, Sulphur, Ars. Album, Mercury) under the Combo view: each pair was tested three ways — once on the combined 2016+2022 dataset, and once independently within each year's subset (2016, 2022).</p>
-      <p>Each of the two outcome measures — Maximum Probability and Root/Sprout Ratio — is drawn as its <strong>own line</strong>: yellow for Maximum Probability, green for Root/Sprout Ratio. When only one measure is significant for a pair, a single colored line is shown. When <strong>both</strong> measures are significant, two parallel lines are drawn side by side rather than blending the two into one color — this keeps the two measures' evidence fully separable rather than compressing them into a single visual channel. A pair with neither measure significant is shown as a single plain grey dashed line.</p>
+      <p>Each of the two outcome measures — Maximum Probability and Root/Sprout Ratio — is drawn as its <strong>own line</strong>: yellow for Maximum Probability, pink for Root/Sprout Ratio. When only one measure is significant for a pair, a single colored line is shown. When <strong>both</strong> measures are significant, two parallel lines are drawn side by side rather than blending the two into one color — this keeps the two measures' evidence fully separable rather than compressing them into a single visual channel. A pair with neither measure significant is shown as a single plain grey dashed line.</p>
       <p><strong>Line thickness</strong> reflects the strength of that specific measure's combined-data effect: a thick line denotes that measure reaching <em>p</em> &lt; 0.01 on its own. Because each measure now has its own line, thickness is unambiguous — a thick yellow line always means Maximum Probability itself reached <em>p</em> &lt; 0.01, regardless of what Root/Sprout Ratio is doing.</p>
       <p><strong>Line style (solid, dashed, or faint dotted)</strong> is evaluated per measure and reflects whether the two yearly subsets agree on <em>that measure specifically</em>: a <strong>solid</strong> line means 2016 and 2022 were both independently significant for that measure. A <strong>dashed</strong> line means the two years disagreed — only one of them reached significance for that measure on its own, even though the combined dataset did. A <strong>faint dotted</strong> line (the same weight as a "not significant" line, but keeping the measure's real color) means the combined data was significant but <strong>neither</strong> year individually corroborates it — this way Combo always shows the same lines as All, with the year-agreement detail layered on top rather than some lines only being visible by switching to the All view. A pair's triangle-qualifying status under Combo matches All exactly, regardless of which of these three tiers its edges land in — see the next section for exactly which edges get the faint-dotted treatment.</p>
     </div>
