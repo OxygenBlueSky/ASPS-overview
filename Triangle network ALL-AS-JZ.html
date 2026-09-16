@@ -881,6 +881,7 @@
     bg.setAttribute('fill', '#ffffff');
     svg.appendChild(bg);
 
+    const textEls = [];
     rows.forEach(row => {
       const swatchSvg = row.querySelector('.legend-swatch-svg');
       const swatchLine = swatchSvg.querySelector('line');
@@ -889,30 +890,52 @@
       const labelRect = labelSpan.getBoundingClientRect();
       const lineComputed = getComputedStyle(swatchLine);
       const textComputed = getComputedStyle(labelSpan);
-      const swatchY = swatchRect.top - containerRect.top + swatchRect.height / 2;
+      // Both the swatch and the label are centered on the SAME flexbox
+      // cross-axis line (align-items: center on the row) — use one shared
+      // center-y for both rather than measuring each independently, so
+      // there's no room for the two to drift apart.
+      const rowCenterY = swatchRect.top - containerRect.top + swatchRect.height / 2;
 
       const line = document.createElementNS(svgNS, 'line');
       line.setAttribute('x1', swatchRect.left - containerRect.left);
       line.setAttribute('x2', swatchRect.right - containerRect.left);
-      line.setAttribute('y1', swatchY);
-      line.setAttribute('y2', swatchY);
+      line.setAttribute('y1', rowCenterY);
+      line.setAttribute('y2', rowCenterY);
       line.setAttribute('stroke', lineComputed.getPropertyValue('stroke'));
       line.setAttribute('stroke-width', lineComputed.getPropertyValue('stroke-width'));
       const dash = lineComputed.getPropertyValue('stroke-dasharray');
       if (dash && dash !== 'none') line.setAttribute('stroke-dasharray', dash);
       svg.appendChild(line);
 
+      // y is a first guess (default alphabetic baseline) — corrected below
+      // by measuring the actual rendered glyph box, since dominant-baseline
+      // keywords ("middle"/"central") are font-metric guesses that don't
+      // reliably match a CSS flexbox box-center.
       const text = document.createElementNS(svgNS, 'text');
       text.setAttribute('x', labelRect.left - containerRect.left);
-      text.setAttribute('y', labelRect.top - containerRect.top + labelRect.height / 2);
-      text.setAttribute('dominant-baseline', 'middle');
+      text.setAttribute('y', rowCenterY);
       text.setAttribute('font-size', textComputed.getPropertyValue('font-size'));
       text.setAttribute('font-family', textComputed.getPropertyValue('font-family'));
       text.setAttribute('font-weight', textComputed.getPropertyValue('font-weight'));
       text.setAttribute('fill', textComputed.getPropertyValue('color'));
       text.textContent = labelSpan.textContent;
       svg.appendChild(text);
+      textEls.push({ text, targetCenterY: rowCenterY });
     });
+
+    // Text must be attached to a rendered document for getBBox() to return
+    // real values — attach off-screen and invisible, measure, correct each
+    // text's y so its own glyph bbox center lands exactly on the swatch
+    // line, then detach and strip the temporary style before serializing.
+    svg.style.cssText = 'position:absolute; visibility:hidden; left:-99999px;';
+    document.body.appendChild(svg);
+    textEls.forEach(({ text, targetCenterY }) => {
+      const bbox = text.getBBox();
+      const glyphCenterY = bbox.y + bbox.height / 2;
+      text.setAttribute('y', targetCenterY + (targetCenterY - glyphCenterY));
+    });
+    document.body.removeChild(svg);
+    svg.removeAttribute('style');
 
     const svgString = '<?xml version="1.0" encoding="UTF-8"?>\n' + new XMLSerializer().serializeToString(svg);
     return { svgString };
