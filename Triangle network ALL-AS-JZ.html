@@ -286,6 +286,7 @@
     <div class="ms-download-row">
       <button class="btn-manuscript btn-manuscript-small" id="ms-download-svg">Download SVG</button>
       <button class="btn-manuscript btn-manuscript-small" id="ms-download-png">Download PNG</button>
+      <button class="btn-manuscript btn-manuscript-small" id="ms-download-legend-svg">Download legend SVG</button>
     </div>
   </div>
 </div>
@@ -853,6 +854,75 @@
     document.body.removeChild(a);
     URL.revokeObjectURL(url);
   }
+
+  // Builds a standalone SVG of the legend (the #ms-legend div is HTML with
+  // small inline swatch <svg> icons, not one SVG document) by measuring the
+  // live rendered rows and reconstructing them as <line>/<text> elements at
+  // the same relative positions, with every style resolved to a literal
+  // value — same self-containment reasoning as buildExportSvg() above.
+  function buildExportLegendSvg() {
+    const container = document.getElementById('ms-legend');
+    const containerRect = container.getBoundingClientRect();
+    const rows = [...container.querySelectorAll('.ms-legend-item')];
+
+    const pad = EXPORT_PADDING;
+    const w = containerRect.width, h = containerRect.height;
+    const totalW = w + pad * 2, totalH = h + pad * 2;
+
+    const svg = document.createElementNS(svgNS, 'svg');
+    svg.setAttribute('xmlns', 'http://www.w3.org/2000/svg');
+    svg.setAttribute('width', totalW);
+    svg.setAttribute('height', totalH);
+    svg.setAttribute('viewBox', `${-pad} ${-pad} ${totalW} ${totalH}`);
+
+    const bg = document.createElementNS(svgNS, 'rect');
+    bg.setAttribute('x', -pad); bg.setAttribute('y', -pad);
+    bg.setAttribute('width', totalW); bg.setAttribute('height', totalH);
+    bg.setAttribute('fill', '#ffffff');
+    svg.appendChild(bg);
+
+    rows.forEach(row => {
+      const swatchSvg = row.querySelector('.legend-swatch-svg');
+      const swatchLine = swatchSvg.querySelector('line');
+      const swatchRect = swatchSvg.getBoundingClientRect();
+      const labelSpan = row.querySelector('span');
+      const labelRect = labelSpan.getBoundingClientRect();
+      const lineComputed = getComputedStyle(swatchLine);
+      const textComputed = getComputedStyle(labelSpan);
+      const swatchY = swatchRect.top - containerRect.top + swatchRect.height / 2;
+
+      const line = document.createElementNS(svgNS, 'line');
+      line.setAttribute('x1', swatchRect.left - containerRect.left);
+      line.setAttribute('x2', swatchRect.right - containerRect.left);
+      line.setAttribute('y1', swatchY);
+      line.setAttribute('y2', swatchY);
+      line.setAttribute('stroke', lineComputed.getPropertyValue('stroke'));
+      line.setAttribute('stroke-width', lineComputed.getPropertyValue('stroke-width'));
+      const dash = lineComputed.getPropertyValue('stroke-dasharray');
+      if (dash && dash !== 'none') line.setAttribute('stroke-dasharray', dash);
+      svg.appendChild(line);
+
+      const text = document.createElementNS(svgNS, 'text');
+      text.setAttribute('x', labelRect.left - containerRect.left);
+      text.setAttribute('y', labelRect.top - containerRect.top + labelRect.height / 2);
+      text.setAttribute('dominant-baseline', 'middle');
+      text.setAttribute('font-size', textComputed.getPropertyValue('font-size'));
+      text.setAttribute('font-family', textComputed.getPropertyValue('font-family'));
+      text.setAttribute('font-weight', textComputed.getPropertyValue('font-weight'));
+      text.setAttribute('fill', textComputed.getPropertyValue('color'));
+      text.textContent = labelSpan.textContent;
+      svg.appendChild(text);
+    });
+
+    const svgString = '<?xml version="1.0" encoding="UTF-8"?>\n' + new XMLSerializer().serializeToString(svg);
+    return { svgString };
+  }
+
+  document.getElementById('ms-download-legend-svg').addEventListener('click', () => {
+    const { svgString } = buildExportLegendSvg();
+    const blob = new Blob([svgString], { type: 'image/svg+xml;charset=utf-8' });
+    triggerDownload(blob, exportFilenameBase() + '_legend.svg');
+  });
 
   document.getElementById('ms-download-svg').addEventListener('click', () => {
     const { svgString } = buildExportSvg();
