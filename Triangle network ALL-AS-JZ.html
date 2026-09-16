@@ -170,6 +170,9 @@
   .manuscript-panel svg { display: block; }
   .ms-legend { display: flex; flex-direction: column; gap: 9px; font-size: 12px; color: var(--text-primary); white-space: nowrap; }
   .ms-legend-item { display: flex; align-items: center; gap: 7px; }
+  .ms-download-row { display: flex; gap: 10px; margin-top: 14px; }
+  .btn-manuscript-small { font-size: 11.5px; padding: 6px 12px; background: var(--surface-2); color: var(--text-primary); border: 1px solid var(--border); }
+  .btn-manuscript-small:hover { background: var(--surface-1); opacity: 1; }
 </style>
 
 <div class="viz-root">
@@ -279,6 +282,10 @@
     <div class="manuscript-panel">
       <svg id="ms-svg" width="355" height="394" viewBox="0 0 355 394" role="img" aria-label="Manuscript-layout network figure"></svg>
       <div class="ms-legend" id="ms-legend"></div>
+    </div>
+    <div class="ms-download-row">
+      <button class="btn-manuscript btn-manuscript-small" id="ms-download-svg">Download SVG</button>
+      <button class="btn-manuscript btn-manuscript-small" id="ms-download-png">Download PNG</button>
     </div>
   </div>
 </div>
@@ -773,6 +780,104 @@
     }
     document.getElementById('ms-caption').innerHTML = captionHTML;
   }
+
+  // ---- manuscript export: download the graph itself (not the legend) as a
+  // standalone .svg or a high-resolution .png, with a small padding margin.
+  // The exported markup is fully self-contained — a standalone SVG file has
+  // no access to this page's external <style> rules, so every element's
+  // resolved (computed) appearance is copied onto it as presentation
+  // attributes rather than relying on CSS classes. ----
+  const EXPORT_PADDING = 12;   // px of whitespace added to every side
+  const EXPORT_PNG_SCALE = 6;  // resolution multiplier for the PNG export
+
+  function slug(s) {
+    return s.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '');
+  }
+  function exportFilenameBase() {
+    const parts = [datasetLabel(state.dataset), effectLabel(state.effect), measureLabel(state.measure)];
+    if (state.selectedTriangle) parts.push('trio-' + state.selectedTriangle.split('|').join('-'));
+    return 'triangle-network_' + parts.map(slug).join('_');
+  }
+
+  // Copies each live element's resolved style onto its clone (same
+  // selector, same document order) as plain presentation attributes.
+  function inlinePresentation(liveRoot, cloneRoot, selector, props) {
+    const liveEls = liveRoot.querySelectorAll(selector);
+    const cloneEls = cloneRoot.querySelectorAll(selector);
+    liveEls.forEach((liveEl, i) => {
+      const computed = getComputedStyle(liveEl);
+      props.forEach(prop => {
+        const value = computed.getPropertyValue(prop);
+        if (value) cloneEls[i].setAttribute(prop, value);
+      });
+    });
+  }
+
+  // Builds a self-contained export of #ms-svg only (never the legend or
+  // caption), padded by EXPORT_PADDING on every side with a white backing
+  // rect so the file isn't transparent when opened elsewhere.
+  function buildExportSvg() {
+    const liveSvg = document.getElementById('ms-svg');
+    const vb = liveSvg.viewBox.baseVal;
+    const clone = liveSvg.cloneNode(true);
+
+    clone.querySelectorAll('.is-hidden').forEach(el => el.remove());
+
+    inlinePresentation(liveSvg, clone, 'line', ['stroke', 'stroke-width', 'stroke-dasharray', 'opacity']);
+    inlinePresentation(liveSvg, clone, 'circle', ['fill', 'stroke', 'stroke-width']);
+    inlinePresentation(liveSvg, clone, 'text', ['fill', 'font-size', 'font-weight', 'font-family', 'text-anchor', 'opacity']);
+
+    const x = vb.x - EXPORT_PADDING, y = vb.y - EXPORT_PADDING;
+    const w = vb.width + EXPORT_PADDING * 2, h = vb.height + EXPORT_PADDING * 2;
+    clone.setAttribute('xmlns', 'http://www.w3.org/2000/svg');
+    clone.setAttribute('viewBox', `${x} ${y} ${w} ${h}`);
+    clone.setAttribute('width', w);
+    clone.setAttribute('height', h);
+
+    const bg = document.createElementNS(svgNS, 'rect');
+    bg.setAttribute('x', x); bg.setAttribute('y', y);
+    bg.setAttribute('width', w); bg.setAttribute('height', h);
+    bg.setAttribute('fill', '#ffffff');
+    clone.insertBefore(bg, clone.firstChild);
+
+    const svgString = '<?xml version="1.0" encoding="UTF-8"?>\n' + new XMLSerializer().serializeToString(clone);
+    return { svgString, width: w, height: h };
+  }
+
+  function triggerDownload(blob, filename) {
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url; a.download = filename;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  }
+
+  document.getElementById('ms-download-svg').addEventListener('click', () => {
+    const { svgString } = buildExportSvg();
+    const blob = new Blob([svgString], { type: 'image/svg+xml;charset=utf-8' });
+    triggerDownload(blob, exportFilenameBase() + '.svg');
+  });
+
+  document.getElementById('ms-download-png').addEventListener('click', () => {
+    const { svgString, width, height } = buildExportSvg();
+    const svgBlob = new Blob([svgString], { type: 'image/svg+xml;charset=utf-8' });
+    const url = URL.createObjectURL(svgBlob);
+    const img = new Image();
+    img.onload = () => {
+      const canvas = document.createElement('canvas');
+      canvas.width = width * EXPORT_PNG_SCALE;
+      canvas.height = height * EXPORT_PNG_SCALE;
+      const ctx = canvas.getContext('2d');
+      ctx.fillStyle = '#ffffff';
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+      ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+      URL.revokeObjectURL(url);
+      canvas.toBlob(blob => triggerDownload(blob, exportFilenameBase() + '.png'), 'image/png');
+    };
+    img.src = url;
+  });
 
   const manuscriptToggle = document.getElementById('manuscript-toggle');
   const vizRootEl = document.querySelector('.viz-root');
